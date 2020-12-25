@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
-	"strings"
 
 	"fyne.io/fyne"
 	"github.com/psanford/wormhole-william/wormhole"
@@ -21,7 +19,8 @@ func (c *Client) NewFileSend(file fyne.URIReadCloser, progress wormhole.SendOpti
 // NewDirSend takes a listable URI and sends it using wormhole-william.
 func (c *Client) NewDirSend(dir fyne.ListableURI, progress wormhole.SendOption) (string, chan wormhole.SendResult, error) {
 	dirpath := dir.String()[7:]
-	prefix, _ := filepath.Split(dirpath)
+	prefixStr, _ := filepath.Split(dirpath)
+	prefix := len(prefixStr) // Where the prefix ends. Doing it this way is faster and works when paths don't use same separator (\ or /).
 
 	var files []wormhole.DirectoryEntry
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
@@ -31,12 +30,8 @@ func (c *Client) NewDirSend(dir fyne.ListableURI, progress wormhole.SendOption) 
 			return nil
 		}
 
-		if runtime.GOOS == "windows" {
-			path = filepath.ToSlash(path)
-		}
-
 		files = append(files, wormhole.DirectoryEntry{
-			Path: strings.TrimPrefix(path, prefix),
+			Path: path[prefix:], // Instead of strings.TrimPrefix. Paths don't need match (e.g. "C:/home/dir" == "C:\home\dir").
 			Mode: info.Mode(),
 			Reader: func() (io.ReadCloser, error) {
 				return os.Open(path) // #nosec - path is already cleaned by filepath.Walk
