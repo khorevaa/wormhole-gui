@@ -1,6 +1,6 @@
 # wormhole-gui
 
-Wormhole-gui is a cross-platform graphical interface for magic-wormhole that lets you easily share files, folders and text between computers on the local network.
+Wormhole-gui is a cross-platform graphical interface for magic-wormhole, providing easy and secure end-to-end encrypted sharing of files, folders and text between computers on a local network.
 It uses the Go implementation of magic-wormhole, called [wormhole-william](https://github.com/psanford/wormhole-william), and compiles into a single binary.
 
 <p align="center">
