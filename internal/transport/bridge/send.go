@@ -7,7 +7,6 @@ import (
 	"fyne.io/fyne/storage"
 	"fyne.io/fyne/widget"
 	"github.com/Jacalz/wormhole-gui/internal/transport"
-	"github.com/psanford/wormhole-william/wormhole"
 )
 
 var emptySendItem = &SendItem{}
@@ -87,17 +86,18 @@ func (p *SendList) OnFileSelect(file fyne.URIReadCloser, err error) {
 	}
 
 	p.NewSendItem(file.URI())
-	code, result, f, err := p.client.NewFileSend(file, p.Items[p.Length()-1].Progress.update)
-	if err != nil {
-		fyne.LogError("Error on sending file", err)
-		dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
-		return
-	}
 
-	p.Items[p.Length()-1].Code = code
-	p.Refresh()
+	go func(i int) {
+		code, result, f, err := p.client.NewFileSend(file, p.Items[i].Progress.update)
+		if err != nil {
+			fyne.LogError("Error on sending file", err)
+			dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
+			return
+		}
 
-	go func(status chan wormhole.SendResult) {
+		p.Items[i].Code = code
+		p.Refresh()
+
 		if res := <-result; res.Error != nil {
 			fyne.LogError("Error on sending file", res.Error)
 			dialog.ShowError(res.Error, fyne.CurrentApp().Driver().AllWindows()[0])
@@ -108,7 +108,7 @@ func (p *SendList) OnFileSelect(file fyne.URIReadCloser, err error) {
 		if err = f.Close(); err != nil {
 			fyne.LogError("Error on closing file", err)
 		}
-	}(result)
+	}(p.Length() - 1)
 }
 
 // OnDirSelect is intended to be passed as callback to a FolderOpen dialog.
@@ -123,15 +123,15 @@ func (p *SendList) OnDirSelect(dir fyne.ListableURI, err error) {
 
 	p.NewSendItem(dir)
 
-	go func() {
-		code, result, err := p.client.NewDirSend(dir, p.Items[p.Length()-1].Progress.update)
+	go func(i int) {
+		code, result, err := p.client.NewDirSend(dir, p.Items[i].Progress.update)
 		if err != nil {
 			fyne.LogError("Error on sending directory", err)
 			dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
 			return
 		}
 
-		p.Items[p.Length()-1].Code = code
+		p.Items[i].Code = code
 		p.Refresh()
 
 		if res := <-result; res.Error != nil {
@@ -140,31 +140,32 @@ func (p *SendList) OnDirSelect(dir fyne.ListableURI, err error) {
 		} else if res.OK && p.client.Notifications {
 			fyne.CurrentApp().SendNotification(fyne.NewNotification("Send completed", "The directory was sent successfully"))
 		}
-	}()
+	}(p.Length() - 1)
 }
 
 // SendText sends new text.
 func (p *SendList) SendText() {
 	if text := <-p.client.EnterSendText(); text != "" {
 		p.NewSendItem(storage.NewURI("Text Snippet"))
-		code, result, err := p.client.NewTextSend(text, p.Items[p.Length()-1].Progress.update)
-		if err != nil {
-			fyne.LogError("Error on sending text", err)
-			dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
-			return
-		}
 
-		p.Items[p.Length()-1].Code = code
-		p.Refresh()
+		go func(i int) {
+			code, result, err := p.client.NewTextSend(text, p.Items[i].Progress.update)
+			if err != nil {
+				fyne.LogError("Error on sending text", err)
+				dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
+				return
+			}
 
-		go func(status chan wormhole.SendResult) {
+			p.Items[i].Code = code
+			p.Refresh()
+
 			if res := <-result; res.Error != nil {
 				fyne.LogError("Error on sending text", err)
 				dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
 			} else if res.OK && p.client.Notifications {
 				fyne.CurrentApp().SendNotification(fyne.NewNotification("Send completed", "The text was sent successfully"))
 			}
-		}(result)
+		}(p.Length() - 1)
 	}
 }
 
