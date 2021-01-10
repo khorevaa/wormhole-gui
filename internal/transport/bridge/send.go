@@ -162,8 +162,8 @@ func (p *SendList) SendText() {
 			p.Refresh()
 
 			if res := <-result; res.Error != nil {
-				fyne.LogError("Error on sending text", err)
-				dialog.ShowError(err, fyne.CurrentApp().Driver().AllWindows()[0])
+				fyne.LogError("Error on sending text", res.Error)
+				dialog.ShowError(res.Error, fyne.CurrentApp().Driver().AllWindows()[0])
 				p.client.ShowNotification("Text send failed", "An error occurred when sending the text.")
 			} else if res.OK && p.client.Notifications {
 				fyne.CurrentApp().SendNotification(fyne.NewNotification("Text send completed", "The text was sent successfully."))
